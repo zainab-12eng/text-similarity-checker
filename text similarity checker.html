@@ -1,0 +1,1032 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>PlagiaCheck — Text Similarity Analyzer</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0f0f10;
+    --surface: #19191c;
+    --surface2: #222226;
+    --surface3: #2a2a30;
+    --border: rgba(255,255,255,0.07);
+    --border2: rgba(255,255,255,0.13);
+    --text: #f0ede8;
+    --text2: #9995a0;
+    --text3: #5c5868;
+    --accent: #e8c97a;
+    --accent2: #c9a84c;
+    --green: #5ec98a;
+    --green-bg: rgba(94,201,138,0.12);
+    --red: #e87070;
+    --red-bg: rgba(232,112,112,0.12);
+    --amber: #e8b44a;
+    --amber-bg: rgba(232,180,74,0.12);
+    --blue: #6ab0e8;
+    --blue-bg: rgba(106,176,232,0.12);
+    --radius: 10px;
+    --radius-lg: 16px;
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: 'Outfit', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    font-size: 15px;
+    line-height: 1.6;
+  }
+
+  /* ── HEADER ── */
+  header {
+    padding: 28px 40px 24px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+  }
+  .logo {
+    font-family: 'DM Serif Display', serif;
+    font-size: 24px;
+    color: var(--accent);
+    letter-spacing: -0.3px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .logo-icon {
+    width: 34px; height: 34px;
+    background: var(--accent);
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .logo-icon svg { width: 18px; height: 18px; }
+  .header-sub {
+    font-size: 13px;
+    color: var(--text3);
+    font-weight: 300;
+  }
+  .mode-pill {
+    display: flex;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 30px;
+    overflow: hidden;
+    gap: 2px;
+    padding: 3px;
+  }
+  .mode-btn {
+    padding: 6px 18px;
+    font-size: 13px;
+    font-family: 'Outfit', sans-serif;
+    border: none;
+    background: transparent;
+    color: var(--text2);
+    cursor: pointer;
+    border-radius: 26px;
+    transition: all .18s;
+    font-weight: 400;
+  }
+  .mode-btn.active {
+    background: var(--accent);
+    color: #0f0f10;
+    font-weight: 600;
+  }
+
+  /* ── MAIN LAYOUT ── */
+  main { padding: 32px 40px 60px; max-width: 1280px; margin: 0 auto; }
+
+  /* ── INPUT ZONE ── */
+  .input-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+  .doc-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    transition: border-color .2s;
+  }
+  .doc-card:focus-within { border-color: var(--border2); }
+  .doc-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px 10px;
+    border-bottom: 1px solid var(--border);
+  }
+  .doc-label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--text3);
+  }
+  .doc-label span {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px; height: 20px;
+    border-radius: 50%;
+    background: var(--surface3);
+    color: var(--text2);
+    font-size: 11px;
+    font-weight: 600;
+    margin-right: 8px;
+  }
+  .doc-actions { display: flex; gap: 8px; align-items: center; }
+  .upload-btn {
+    display: flex; align-items: center; gap: 5px;
+    padding: 4px 12px;
+    font-size: 12px;
+    font-family: 'Outfit', sans-serif;
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    border-radius: 6px;
+    color: var(--text2);
+    cursor: pointer;
+    transition: all .15s;
+    white-space: nowrap;
+  }
+  .upload-btn:hover { background: var(--surface3); color: var(--text); }
+  .upload-btn svg { width: 13px; height: 13px; flex-shrink: 0; }
+  input[type="file"] { display: none; }
+  .clear-btn {
+    padding: 4px 10px;
+    font-size: 12px;
+    font-family: 'Outfit', sans-serif;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text3);
+    cursor: pointer;
+    transition: all .15s;
+  }
+  .clear-btn:hover { color: var(--red); border-color: var(--red); }
+  textarea.doc-input {
+    width: 100%;
+    min-height: 180px;
+    max-height: 320px;
+    resize: vertical;
+    padding: 14px 16px;
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    line-height: 1.7;
+    color: var(--text);
+    background: transparent;
+    border: none;
+    outline: none;
+  }
+  textarea.doc-input::placeholder { color: var(--text3); }
+  .doc-footer {
+    padding: 8px 16px;
+    font-size: 12px;
+    color: var(--text3);
+    border-top: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .file-name {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--accent2);
+    max-width: 180px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* ── ANALYZE BUTTON ── */
+  .analyze-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    margin-bottom: 32px;
+  }
+  .analyze-btn {
+    padding: 13px 48px;
+    font-family: 'Outfit', sans-serif;
+    font-size: 15px;
+    font-weight: 600;
+    background: var(--accent);
+    color: #0f0f10;
+    border: none;
+    border-radius: 30px;
+    cursor: pointer;
+    letter-spacing: .02em;
+    transition: all .2s;
+    display: flex; align-items: center; gap: 8px;
+    box-shadow: 0 0 0 0 rgba(232,201,122,0);
+  }
+  .analyze-btn:hover {
+    background: #f0d88a;
+    transform: translateY(-1px);
+    box-shadow: 0 8px 28px rgba(232,201,122,0.22);
+  }
+  .analyze-btn:active { transform: translateY(0); }
+  .analyze-btn svg { width: 16px; height: 16px; }
+
+  /* ── RESULTS ── */
+  #results { display: none; animation: fadeUp .35s ease; }
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ── METRICS ROW ── */
+  .metrics-row {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+  .metric-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px 18px;
+  }
+  .metric-card.featured {
+    border-color: var(--accent2);
+    background: linear-gradient(135deg, rgba(232,201,122,.08) 0%, var(--surface) 100%);
+  }
+  .metric-lbl {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    color: var(--text3);
+    margin-bottom: 6px;
+  }
+  .metric-val {
+    font-family: 'DM Serif Display', serif;
+    font-size: 28px;
+    line-height: 1;
+  }
+  .metric-val.color-green { color: var(--green); }
+  .metric-val.color-amber { color: var(--amber); }
+  .metric-val.color-red   { color: var(--red); }
+  .metric-val.color-accent { color: var(--accent); }
+
+  /* ── SIMILARITY BAR ── */
+  .sim-bar-section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px 20px;
+    margin-bottom: 24px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+  }
+  .sim-bar-label { font-size: 13px; color: var(--text2); min-width: 80px; }
+  .sim-bar-track {
+    flex: 1;
+    height: 10px;
+    background: var(--surface3);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .sim-bar-fill {
+    height: 100%;
+    border-radius: 6px;
+    transition: width .7s cubic-bezier(.4,0,.2,1);
+  }
+  .sim-verdict {
+    font-size: 13px;
+    font-weight: 600;
+    padding: 4px 14px;
+    border-radius: 20px;
+    white-space: nowrap;
+  }
+  .verdict-high { background: var(--red-bg); color: var(--red); }
+  .verdict-med  { background: var(--amber-bg); color: var(--amber); }
+  .verdict-low  { background: var(--green-bg); color: var(--green); }
+
+  /* ── TABS ── */
+  .tab-bar {
+    display: flex;
+    gap: 2px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 20px;
+  }
+  .tab {
+    padding: 10px 22px;
+    font-size: 13px;
+    font-family: 'Outfit', sans-serif;
+    font-weight: 500;
+    background: transparent;
+    border: none;
+    color: var(--text3);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    transition: all .15s;
+  }
+  .tab:hover { color: var(--text2); }
+  .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  /* ── HIGHLIGHT VIEW ── */
+  .highlight-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  .highlight-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+  .highlight-box-header {
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--border);
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    color: var(--text3);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .legend-dot {
+    display: inline-block;
+    width: 10px; height: 10px;
+    border-radius: 2px;
+    margin-right: 6px;
+  }
+  .highlight-content {
+    padding: 16px;
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    line-height: 2;
+    color: var(--text2);
+    white-space: pre-wrap;
+    word-break: break-word;
+    max-height: 340px;
+    overflow-y: auto;
+  }
+  mark.mA {
+    background: rgba(94,201,138,.22);
+    color: var(--green);
+    border-radius: 3px;
+    padding: 1px 1px;
+  }
+  mark.mB {
+    background: rgba(106,176,232,.22);
+    color: var(--blue);
+    border-radius: 3px;
+    padding: 1px 1px;
+  }
+
+  /* ── LCS OUTPUT ── */
+  .lcs-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+  }
+  .lcs-title { font-size: 13px; font-weight: 600; color: var(--text2); margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+  .lcs-title span { font-size: 12px; font-weight: 400; color: var(--text3); font-family: 'DM Mono', monospace; }
+  .lcs-tokens {
+    font-family: 'DM Mono', monospace;
+    font-size: 14px;
+    line-height: 2;
+    color: var(--accent);
+    word-break: break-all;
+  }
+  .lcs-empty { color: var(--text3); font-size: 14px; font-style: italic; }
+
+  /* ── DP TABLE ── */
+  .dp-container {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+  .dp-header {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    font-size: 12px;
+    color: var(--text3);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .dp-scroll { overflow: auto; max-height: 400px; }
+  table.dp-tbl {
+    border-collapse: collapse;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    width: 100%;
+  }
+  table.dp-tbl th, table.dp-tbl td {
+    padding: 6px 10px;
+    text-align: center;
+    border: 1px solid var(--border);
+    min-width: 36px;
+  }
+  table.dp-tbl th {
+    background: var(--surface2);
+    color: var(--text3);
+    font-weight: 500;
+    position: sticky;
+    top: 0;
+    z-index: 2;
+  }
+  table.dp-tbl td.row-head {
+    background: var(--surface2);
+    color: var(--text3);
+    font-weight: 500;
+    position: sticky;
+    left: 0;
+    z-index: 1;
+  }
+  table.dp-tbl th:first-child { z-index: 3; }
+  table.dp-tbl td.on-path {
+    background: rgba(94,201,138,.18);
+    color: var(--green);
+    font-weight: 500;
+  }
+
+  /* ── ALGORITHM PANEL ── */
+  .algo-panel {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  .algo-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+  }
+  .algo-card h3 {
+    font-family: 'DM Serif Display', serif;
+    font-size: 17px;
+    color: var(--text);
+    margin-bottom: 14px;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 10px;
+  }
+  .algo-step {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 12px;
+    font-size: 13px;
+    color: var(--text2);
+    line-height: 1.65;
+  }
+  .step-n {
+    min-width: 22px; height: 22px;
+    background: var(--surface3);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--accent);
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+  code.inline {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    background: var(--surface3);
+    color: var(--accent2);
+    padding: 1px 6px;
+    border-radius: 4px;
+    border: 1px solid var(--border2);
+  }
+  .complexity-row {
+    display: flex;
+    gap: 10px;
+    margin-top: 10px;
+    flex-wrap: wrap;
+  }
+  .complexity-pill {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    padding: 4px 12px;
+    border-radius: 20px;
+    border: 1px solid var(--border2);
+    color: var(--text2);
+    background: var(--surface2);
+  }
+  .complexity-pill strong { color: var(--accent); font-weight: 500; }
+
+  /* ── EXPORT ── */
+  .export-row {
+    display: flex;
+    gap: 10px;
+    margin-top: 28px;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+  }
+  .export-btn {
+    padding: 9px 22px;
+    font-size: 13px;
+    font-family: 'Outfit', sans-serif;
+    font-weight: 500;
+    border-radius: 8px;
+    border: 1px solid var(--border2);
+    background: var(--surface);
+    color: var(--text2);
+    cursor: pointer;
+    display: flex; align-items: center; gap: 7px;
+    transition: all .15s;
+  }
+  .export-btn:hover { background: var(--surface2); color: var(--text); }
+  .export-btn svg { width: 14px; height: 14px; }
+
+  /* ── TOAST ── */
+  .toast {
+    position: fixed;
+    bottom: 28px; right: 28px;
+    background: var(--surface3);
+    border: 1px solid var(--border2);
+    color: var(--text);
+    padding: 12px 20px;
+    border-radius: var(--radius);
+    font-size: 13px;
+    opacity: 0;
+    transform: translateY(10px);
+    pointer-events: none;
+    transition: all .2s;
+    z-index: 999;
+  }
+  .toast.show { opacity: 1; transform: translateY(0); }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 900px) {
+    main { padding: 20px 16px 40px; }
+    header { padding: 20px 16px; }
+    .input-grid, .highlight-grid, .algo-panel { grid-template-columns: 1fr; }
+    .metrics-row { grid-template-columns: repeat(3, 1fr); }
+    header .header-sub { display: none; }
+  }
+  @media (max-width: 560px) {
+    .metrics-row { grid-template-columns: 1fr 1fr; }
+  }
+
+  /* scrollbars */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--surface3); border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div style="display:flex;align-items:center;gap:14px;">
+    <div class="logo">
+      <div class="logo-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#0f0f10" stroke-width="2.2" stroke-linecap="round">
+          <path d="M9 3H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-4"/>
+          <path d="M17 3l4 4-9 9H8v-4l9-9z"/>
+        </svg>
+      </div>
+      PlagiaCheck
+    </div>
+    <div class="header-sub">LCS-Based Text Similarity Analyzer</div>
+  </div>
+  <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+    <span style="font-size:12px;color:var(--text3);">Compare by</span>
+    <div class="mode-pill">
+      <button class="mode-btn active" id="modeChar" onclick="setMode('char')">Characters</button>
+      <button class="mode-btn" id="modeWord" onclick="setMode('word')">Words</button>
+    </div>
+  </div>
+</header>
+
+<main>
+  <!-- INPUT ZONE -->
+  <div class="input-grid">
+    <!-- Doc A -->
+    <div class="doc-card">
+      <div class="doc-header">
+        <div class="doc-label"><span>A</span>Document A</div>
+        <div class="doc-actions">
+          <label class="upload-btn" for="fileA">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            Upload .txt
+          </label>
+          <input type="file" id="fileA" accept=".txt" onchange="loadFile('A', this)"/>
+          <button class="clear-btn" onclick="clearDoc('A')">Clear</button>
+        </div>
+      </div>
+      <textarea class="doc-input" id="textA" placeholder="Paste the first document here, or upload a .txt file above…"></textarea>
+      <div class="doc-footer">
+        <span id="fileNameA" class="file-name"></span>
+        <span id="charCountA" style="font-family:'DM Mono',monospace;font-size:11px;">— chars</span>
+      </div>
+    </div>
+
+    <!-- Doc B -->
+    <div class="doc-card">
+      <div class="doc-header">
+        <div class="doc-label"><span>B</span>Document B</div>
+        <div class="doc-actions">
+          <label class="upload-btn" for="fileB">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            Upload .txt
+          </label>
+          <input type="file" id="fileB" accept=".txt" onchange="loadFile('B', this)"/>
+          <button class="clear-btn" onclick="clearDoc('B')">Clear</button>
+        </div>
+      </div>
+      <textarea class="doc-input" id="textB" placeholder="Paste the second document here, or upload a .txt file above…"></textarea>
+      <div class="doc-footer">
+        <span id="fileNameB" class="file-name"></span>
+        <span id="charCountB" style="font-family:'DM Mono',monospace;font-size:11px;">— chars</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ANALYZE -->
+  <div class="analyze-row">
+    <button class="analyze-btn" onclick="runAnalysis()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      Analyze Similarity
+    </button>
+  </div>
+
+  <!-- RESULTS -->
+  <div id="results">
+
+    <!-- Metrics -->
+    <div class="metrics-row">
+      <div class="metric-card featured">
+        <div class="metric-lbl">Similarity</div>
+        <div class="metric-val" id="mSim">—</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-lbl">LCS Length</div>
+        <div class="metric-val color-accent" id="mLcs">—</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-lbl">Doc A Tokens</div>
+        <div class="metric-val" id="mA" style="color:var(--blue);">—</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-lbl">Doc B Tokens</div>
+        <div class="metric-val" id="mB" style="color:var(--blue);">—</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-lbl">Mode</div>
+        <div class="metric-val" id="mMode" style="font-size:20px;color:var(--text2);">—</div>
+      </div>
+    </div>
+
+    <!-- Bar -->
+    <div class="sim-bar-section">
+      <div class="sim-bar-label">Match level</div>
+      <div class="sim-bar-track">
+        <div class="sim-bar-fill" id="simBarFill" style="width:0%"></div>
+      </div>
+      <div class="sim-verdict" id="simVerdict">—</div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tab-bar">
+      <button class="tab active" onclick="switchTab('highlights', this)">Highlighted Match</button>
+      <button class="tab" onclick="switchTab('lcs', this)">LCS Output</button>
+      <button class="tab" onclick="switchTab('dp', this)">DP Table</button>
+      <button class="tab" onclick="switchTab('algorithm', this)">Algorithm & Complexity</button>
+    </div>
+
+    <!-- TAB: Highlights -->
+    <div class="tab-panel active" id="tab-highlights">
+      <div class="highlight-grid">
+        <div class="highlight-box">
+          <div class="highlight-box-header">
+            <span><span class="legend-dot" style="background:var(--green);"></span>Document A</span>
+            <span style="font-size:11px;font-weight:400;color:var(--text3);">green = matched</span>
+          </div>
+          <div class="highlight-content" id="hlA"></div>
+        </div>
+        <div class="highlight-box">
+          <div class="highlight-box-header">
+            <span><span class="legend-dot" style="background:var(--blue);"></span>Document B</span>
+            <span style="font-size:11px;font-weight:400;color:var(--text3);">blue = matched</span>
+          </div>
+          <div class="highlight-content" id="hlB"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB: LCS -->
+    <div class="tab-panel" id="tab-lcs">
+      <div class="lcs-box">
+        <div class="lcs-title">
+          Longest Common Subsequence
+          <span id="lcsLenLabel"></span>
+        </div>
+        <div id="lcsDisplay" class="lcs-tokens"></div>
+      </div>
+    </div>
+
+    <!-- TAB: DP Table -->
+    <div class="tab-panel" id="tab-dp">
+      <div class="dp-container">
+        <div class="dp-header">
+          <span>Dynamic programming matrix — green cells trace the optimal backtrack path</span>
+          <span id="dpTruncNote" style="color:var(--amber);font-size:11px;"></span>
+        </div>
+        <div class="dp-scroll">
+          <div id="dpTable"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB: Algorithm -->
+    <div class="tab-panel" id="tab-algorithm">
+      <div class="algo-panel">
+        <div class="algo-card">
+          <h3>Algorithm Steps</h3>
+          <div class="algo-step"><div class="step-n">1</div><div><strong style="color:var(--text);">Tokenize</strong><br>Split both texts into tokens (characters or words). Creates sequences A[0..m-1] and B[0..n-1].</div></div>
+          <div class="algo-step"><div class="step-n">2</div><div><strong style="color:var(--text);">Build DP Table</strong><br>Initialize an <code class="inline">(m+1)×(n+1)</code> matrix filled with zeros. Each cell <code class="inline">dp[i][j]</code> stores the LCS length for the first i and j tokens.</div></div>
+          <div class="algo-step"><div class="step-n">3</div><div><strong style="color:var(--text);">Fill Recurrence</strong><br>If <code class="inline">A[i-1] == B[j-1]</code>: <code class="inline">dp[i][j] = dp[i-1][j-1]+1</code><br>Else: <code class="inline">dp[i][j] = max(dp[i-1][j], dp[i][j-1])</code></div></div>
+          <div class="algo-step"><div class="step-n">4</div><div><strong style="color:var(--text);">Backtrack</strong><br>Trace from <code class="inline">dp[m][n]</code> back to <code class="inline">dp[0][0]</code> following match decisions to recover the actual subsequence tokens.</div></div>
+          <div class="algo-step"><div class="step-n">5</div><div><strong style="color:var(--text);">Compute Similarity</strong><br>Dice coefficient: <code class="inline">2 × |LCS| / (|A| + |B|) × 100%</code>. Symmetric and length-normalized.</div></div>
+        </div>
+        <div class="algo-card">
+          <h3>Complexity Analysis</h3>
+          <div class="algo-step"><div class="step-n">T</div><div><strong style="color:var(--text);">Time Complexity</strong><br>Every cell of the <code class="inline">m×n</code> table is computed once → <strong style="color:var(--accent);">O(m × n)</strong></div></div>
+          <div class="algo-step"><div class="step-n">S</div><div><strong style="color:var(--text);">Space Complexity</strong><br>The full table is stored for backtracking → <strong style="color:var(--accent);">O(m × n)</strong><br><span style="font-size:12px;color:var(--text3);">Reducible to O(min(m,n)) if only the LCS length is needed (two-row rolling array).</span></div></div>
+          <div class="algo-step"><div class="step-n">J</div><div><strong style="color:var(--text);">Justification</strong><br>LCS is ideal for plagiarism detection because it tolerates insertions, deletions, and minor rephrasing while detecting preserved sequential structure — unlike exact substring matching or simple word-overlap methods.</div></div>
+          <div style="margin-top:16px;">
+            <div style="font-size:12px;color:var(--text3);margin-bottom:8px;">Current run</div>
+            <div class="complexity-row">
+              <div class="complexity-pill">m = <strong id="cmpM">—</strong></div>
+              <div class="complexity-pill">n = <strong id="cmpN">—</strong></div>
+              <div class="complexity-pill">cells = <strong id="cmpCells">—</strong></div>
+              <div class="complexity-pill">LCS = <strong id="cmpLCS">—</strong></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Export Row -->
+    <div class="export-row">
+      <button class="export-btn" onclick="exportReport()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+        Export Report (.txt)
+      </button>
+      <button class="export-btn" onclick="copyReport()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+        Copy Report
+      </button>
+    </div>
+  </div>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  let currentMode = 'char';
+  let lastResult = null;
+
+  // ── live char counters ──
+  function updateCount(id, taId) {
+    const v = document.getElementById(taId).value;
+    document.getElementById(id).textContent = v.length + ' chars';
+  }
+  document.getElementById('textA').addEventListener('input', () => updateCount('charCountA','textA'));
+  document.getElementById('textB').addEventListener('input', () => updateCount('charCountB','textB'));
+  updateCount('charCountA','textA');
+  updateCount('charCountB','textB');
+
+  function setMode(m) {
+    currentMode = m;
+    document.getElementById('modeChar').className = 'mode-btn' + (m==='char'?' active':'');
+    document.getElementById('modeWord').className = 'mode-btn' + (m==='word'?' active':'');
+  }
+
+  function loadFile(doc, input) {
+    const file = input.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = e => {
+      document.getElementById('text'+doc).value = e.target.result;
+      document.getElementById('fileName'+doc).textContent = file.name;
+      updateCount('charCount'+doc, 'text'+doc);
+    };
+    reader.readAsText(file);
+  }
+
+  function clearDoc(doc) {
+    document.getElementById('text'+doc).value = '';
+    document.getElementById('fileName'+doc).textContent = '';
+    updateCount('charCount'+doc,'text'+doc);
+  }
+
+  function tokenize(text, mode) {
+    if (mode==='char') return text.split('');
+    return text.trim().split(/\s+/).filter(Boolean);
+  }
+
+  function buildDP(a, b) {
+    const m = a.length, n = b.length;
+    const dp = [];
+    for (let i=0;i<=m;i++) { dp.push(new Int32Array(n+1)); }
+    for (let i=1;i<=m;i++)
+      for (let j=1;j<=n;j++)
+        dp[i][j] = (a[i-1]===b[j-1]) ? dp[i-1][j-1]+1 : Math.max(dp[i-1][j],dp[i][j-1]);
+    return dp;
+  }
+
+  function backtrack(dp, a, b) {
+    let i=a.length, j=b.length;
+    const lcs=[], pathSet=new Set();
+    while (i>0&&j>0) {
+      if (a[i-1]===b[j-1]) {
+        lcs.unshift({tok:a[i-1],ai:i-1,bi:j-1});
+        pathSet.add(i+','+j);
+        pathSet.add((i-1)+','+(j-1));
+        i--;j--;
+      } else if (dp[i-1][j]>dp[i][j-1]) { i--; }
+      else { j--; }
+    }
+    pathSet.add('0,0');
+    return {lcs, pathSet};
+  }
+
+  function esc(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  function highlightTokens(tokens, matchIdx, cls, mode) {
+    return tokens.map((t,i)=>
+      matchIdx.has(i) ? `<mark class="${cls}">${esc(t)}</mark>` : esc(t)
+    ).join(mode==='char' ? '' : ' ');
+  }
+
+  function buildDPTable(dp, tokA, tokB, pathSet) {
+    const MAX_R=Math.min(tokA.length,25), MAX_C=Math.min(tokB.length,25);
+    const truncated = tokA.length>MAX_R || tokB.length>MAX_C;
+    document.getElementById('dpTruncNote').textContent =
+      truncated ? `Table truncated to ${MAX_R}×${MAX_C} for display` : '';
+
+    let h = '<table class="dp-tbl"><thead><tr><th></th><th>ε</th>';
+    for(let j=0;j<MAX_C;j++) h+=`<th>${esc(tokB[j])}</th>`;
+    if(tokB.length>MAX_C) h+='<th>…</th>';
+    h+='</tr></thead><tbody>';
+    for(let i=0;i<=MAX_R;i++){
+      h+='<tr>';
+      h+=i===0?'<td class="row-head">ε</td>':`<td class="row-head">${esc(tokA[i-1])}</td>`;
+      for(let j=0;j<=MAX_C;j++){
+        const p=pathSet.has(i+','+j);
+        h+=`<td${p?' class="on-path"':''}>${dp[i][j]}</td>`;
+      }
+      if(tokB.length>MAX_C) h+='<td style="color:var(--text3)">…</td>';
+      h+='</tr>';
+    }
+    if(tokA.length>MAX_R) h+=`<tr><td colspan="${MAX_C+2}" style="text-align:center;color:var(--text3);padding:8px;font-size:12px;">… rows truncated</td></tr>`;
+    h+='</tbody></table>';
+    return h;
+  }
+
+  function runAnalysis() {
+    const rawA = document.getElementById('textA').value;
+    const rawB = document.getElementById('textB').value;
+    if(!rawA.trim()||!rawB.trim()) { showToast('Please enter text in both documents.'); return; }
+
+    const tokA = tokenize(rawA, currentMode);
+    const tokB = tokenize(rawB, currentMode);
+    const dp = buildDP(tokA, tokB);
+    const {lcs, pathSet} = backtrack(dp, tokA, tokB);
+    const lcsLen = lcs.length;
+    const pct = (2*lcsLen / (tokA.length+tokB.length) * 100);
+    const pctRound = Math.round(pct*10)/10;
+
+    // color scheme
+    let colorCls, barColor, verdictCls, verdictText;
+    if(pct>=70) { colorCls='color-red'; barColor='#e87070'; verdictCls='verdict-high'; verdictText='High similarity — possible plagiarism'; }
+    else if(pct>=35) { colorCls='color-amber'; barColor='#e8b44a'; verdictCls='verdict-med'; verdictText='Moderate similarity'; }
+    else { colorCls='color-green'; barColor='#5ec98a'; verdictCls='verdict-low'; verdictText='Low similarity — likely original'; }
+
+    // Metrics
+    document.getElementById('mSim').textContent = pctRound+'%';
+    document.getElementById('mSim').className = 'metric-val '+colorCls;
+    document.getElementById('mLcs').textContent = lcsLen;
+    document.getElementById('mA').textContent = tokA.length;
+    document.getElementById('mB').textContent = tokB.length;
+    document.getElementById('mMode').textContent = currentMode==='char' ? 'Chars' : 'Words';
+
+    // Bar
+    const fill = document.getElementById('simBarFill');
+    setTimeout(()=>{ fill.style.width=pctRound+'%'; fill.style.background=barColor; }, 50);
+    const verd = document.getElementById('simVerdict');
+    verd.textContent = verdictText;
+    verd.className = 'sim-verdict '+verdictCls;
+
+    // Highlights
+    const matchA = new Set(lcs.map(x=>x.ai));
+    const matchB = new Set(lcs.map(x=>x.bi));
+    document.getElementById('hlA').innerHTML = highlightTokens(tokA, matchA, 'mA', currentMode);
+    document.getElementById('hlB').innerHTML = highlightTokens(tokB, matchB, 'mB', currentMode);
+
+    // LCS display
+    const lcsStr = lcs.map(x=>x.tok).join(currentMode==='char'?'':' ');
+    document.getElementById('lcsDisplay').textContent = lcsStr || '(no common subsequence)';
+    document.getElementById('lcsLenLabel').textContent = `length = ${lcsLen} ${currentMode==='char'?'characters':'words'}`;
+    document.getElementById('lcsDisplay').className = lcsStr ? 'lcs-tokens' : 'lcs-empty';
+
+    // DP Table
+    document.getElementById('dpTable').innerHTML = buildDPTable(dp, tokA, tokB, pathSet);
+
+    // Complexity
+    document.getElementById('cmpM').textContent = tokA.length;
+    document.getElementById('cmpN').textContent = tokB.length;
+    document.getElementById('cmpCells').textContent = (tokA.length*tokB.length).toLocaleString();
+    document.getElementById('cmpLCS').textContent = lcsLen;
+
+    // save for export
+    lastResult = { pctRound, lcsLen, tokA, tokB, lcsStr, currentMode, verdictText,
+      rawA, rawB };
+
+    document.getElementById('results').style.display = 'block';
+    document.getElementById('results').scrollIntoView({behavior:'smooth', block:'start'});
+  }
+
+  function switchTab(name, btn) {
+    document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+    document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+    document.getElementById('tab-'+name).classList.add('active');
+    btn.classList.add('active');
+  }
+
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(()=>t.classList.remove('show'), 2800);
+  }
+
+  function buildReportText() {
+    if(!lastResult) return '';
+    const r = lastResult;
+    const line = '─'.repeat(60);
+    return [
+      'PLAGIACHECK — SIMILARITY ANALYSIS REPORT',
+      line,
+      `Date        : ${new Date().toLocaleString()}`,
+      `Mode        : ${r.currentMode==='char'?'Character-level':'Word-level'}`,
+      line,
+      'RESULTS',
+      `Similarity  : ${r.pctRound}%`,
+      `LCS Length  : ${r.lcsLen} ${r.currentMode==='char'?'characters':'words'}`,
+      `Doc A tokens: ${r.tokA.length}`,
+      `Doc B tokens: ${r.tokB.length}`,
+      `Verdict     : ${r.verdictText}`,
+      line,
+      'LONGEST COMMON SUBSEQUENCE',
+      r.lcsStr || '(none)',
+      line,
+      'DOCUMENT A',
+      r.rawA,
+      line,
+      'DOCUMENT B',
+      r.rawB,
+      line,
+      'ALGORITHM: Longest Common Subsequence (Dynamic Programming)',
+      `Time Complexity : O(m × n) = O(${r.tokA.length} × ${r.tokB.length})`,
+      `Space Complexity: O(m × n)`,
+      `Similarity Formula: 2 × LCS / (|A| + |B|) = 2 × ${r.lcsLen} / (${r.tokA.length} + ${r.tokB.length}) = ${r.pctRound}%`,
+    ].join('\n');
+  }
+
+  function exportReport() {
+    const text = buildReportText();
+    if(!text) { showToast('Run analysis first.'); return; }
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([text],{type:'text/plain'}));
+    a.download = 'plagiacheck_report.txt';
+    a.click();
+    showToast('Report downloaded!');
+  }
+
+  function copyReport() {
+    const text = buildReportText();
+    if(!text) { showToast('Run analysis first.'); return; }
+    navigator.clipboard.writeText(text).then(()=>showToast('Report copied to clipboard!')).catch(()=>showToast('Copy failed — try Export instead.'));
+  }
+</script>
+</body>
+</html>
